@@ -32,7 +32,7 @@ kernel_init = initializers.he_uniform()
 
 # utility functions
 def E2E_conv(input,num_output,kernel_h,kernel_w):
-    conv_dx1 = Conv1D(num_output,strides=1,kernel_size=(1,kernel_w),kernel_regularizer=reg,kernel_initializer=kernel_init)(input)
+    conv_dx1 = Con
     conv_1xd = Conv1D(num_output,strides=1,kernel_size=(kernel_h,1),kernel_initializer=kernel_init,kernel_regularizer=reg)(input)
     d=np.size(conv_1xd, 1)
     conv_1xd_to_dxd = np.ones((d,d))
