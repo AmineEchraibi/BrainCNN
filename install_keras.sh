@@ -1,1 +1,0 @@
-sudo pip install numpy scipy scikit-learn pillow h5py

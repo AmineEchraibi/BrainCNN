@@ -19,7 +19,7 @@ dropout = 0.5
 momentum = 0.9
 lr = 0.01
 decay = 0.0005
-noise_weight = 0.0625
+noise_weight = 1
 
 reg = regularizers.l2(decay)
 kernel_init = initializers.he_uniform()
