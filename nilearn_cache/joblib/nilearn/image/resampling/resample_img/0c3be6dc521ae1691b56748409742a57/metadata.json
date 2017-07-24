@@ -1,0 +1,1 @@
+{"duration": 8.024358987808228, "input_args": {"img": "<nibabel.nifti1.Nifti1Image object at 0x10d2936d0>", "target_shape": "(61, 73, 61)", "target_affine": "array([[  -3.,   -0.,   -0.,   90.],\n       [  -0.,    3.,   -0., -126.],\n       [   0.,    0.,    3.,  -72.],\n       [   0.,    0.,    0.,    1.]])", "copy": "True", "order": "'F'", "interpolation": "'continuous'"}}
