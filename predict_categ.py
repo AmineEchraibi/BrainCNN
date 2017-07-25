@@ -32,7 +32,7 @@ def plot_matrices(matrices, matrix_kind):
         plt.title('{0}, subject {1}'.format(matrix_kind, n_subject))
 
 
-adhd_data = datasets.fetch_adhd(n_subjects=40)
+adhd_data = datasets.fetch_adhd(n_subjects=30)
 msdl_data = datasets.fetch_atlas_msdl()
 msdl_coords = msdl_data.region_coords
 n_regions = len(msdl_coords)
