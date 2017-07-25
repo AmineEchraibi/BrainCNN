@@ -11,11 +11,9 @@ from keras import optimizers, callbacks, regularizers, initializers
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from E2E_conv import *
-from nilearn import input_data
+
 import numpy as np
 import matplotlib.pylab as plt
-from nilearn import datasets
-from nilearn.connectome import ConnectivityMeasure
 
 
 def plot_matrices(matrices, matrix_kind):
@@ -30,15 +28,15 @@ def plot_matrices(matrices, matrix_kind):
         plt.imshow(matrix, vmin=-vmax, vmax=vmax, cmap='RdBu_r',
                    interpolation='nearest')
         plt.title('{0}, subject {1}'.format(matrix_kind, n_subject))
+from nilearn import datasets
 
-
-adhd_data = datasets.fetch_adhd(n_subjects=40)
+adhd_data = datasets.fetch_adhd(n_subjects=20)
 msdl_data = datasets.fetch_atlas_msdl()
 msdl_coords = msdl_data.region_coords
 n_regions = len(msdl_coords)
 print('MSDL has {0} ROIs, part of the following networks :\n{1}.'.format(
     n_regions, msdl_data.networks))
-
+from nilearn import input_data
 
 masker = input_data.NiftiMapsMasker(
     msdl_data.maps, resampling_target="data", t_r=2.5, detrend=True,
@@ -59,15 +57,16 @@ for func_file, confound_file, phenotypic in zip(
     adhd_labels.append(is_adhd)
 
 print('Data has {0} ADHD subjects.'.format(len(adhd_subjects)))
-
+from nilearn.connectome import ConnectivityMeasure
 
 
 
 conn_measure = ConnectivityMeasure(kind="tangent")
 x_train = conn_measure.fit_transform(pooled_subjects)
+print(x_train.shape)
+print(len(adhd_labels))
 y_train = np.array(adhd_labels,dtype="float32")
-np.save("data/nilearn_input.npy",x_train)
-np.save("data/nilearn_output.npy",y_train)
+print(y_train.shape)
 
 # Prediction ###############################
 
