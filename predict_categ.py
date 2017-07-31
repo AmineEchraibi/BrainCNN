@@ -15,6 +15,8 @@ from E2E_conv import *
 import numpy as np
 import matplotlib.pylab as plt
 
+from sklearn.cross_validation import StratifiedKFold
+
 
 def plot_matrices(matrices, matrix_kind):
     n_matrices = len(matrices)
@@ -118,21 +120,18 @@ opt = optimizers.SGD(nesterov=True,lr=lr)
 model.compile(optimizer=opt,loss='binary_crossentropy',metrics=['accuracy'])
 csv_logger = callbacks.CSVLogger('predict_age.log')
 
+x_train = x_train.reshape(x_train.shape[0], x_train.shape[1], x_train.shape[2], 1)
+skf = StratifiedKFold(y_train, n_folds=2, shuffle=True)
+accuracy = np.array([])
+for i, (train, test) in enumerate(skf):
+    history = model.fit(x_train[train], y_train[train], batch_size=1, nb_epoch=1000, verbose=0, callbacks=[csv_logger])
+    y_pred = model.predict(x_train[test])
+    accuracy = np.append(accuracy,np.array([accuracy_score(y_train[test], y_pred) * 100]))
+    print('Accuracy : ' + str("{0:.2f}".format(accuracy_score(y_train[test], y_pred) * 100)) + " %")
 
-
-x_train = x_train.reshape(x_train.shape[0],x_train.shape[1],x_train.shape[2],1)
-x_train,x_test,y_train,y_test = train_test_split(x_train,y_train,test_size=0.33,random_state=42)
-
-command = str(raw_input("Train or predict ? [t/p]"))
-if command == "t":
-    print("Training the model ...")
-    history=model.fit(x_train,y_train,batch_size=1,nb_epoch=1000,verbose=1,callbacks=[csv_logger])
-    model.save_weights("Weights/BrainCNNWeights_categ.h5")
-else:
-    print("[*] Predicting and printing results for the models trained :")
-    model.load_weights("Weights/BrainCNNWeights_categ.h5")
-    y_pred = model.predict(x_test)
-    print('Accuracy : ' + str("{0:.2f}".format(accuracy_score(y_test, y_pred)*100))+" %")
+print("Accuracy :")
+print(accuracy)
+print("mean accuracy :" + str(np.mean(accuracy)))
 
 
 
