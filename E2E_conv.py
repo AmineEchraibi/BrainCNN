@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
+
 
 from keras import backend as K
 from keras import activations
@@ -78,13 +78,13 @@ class E2E_conv(Layer):
 
     def call(self, inputs):
         kernel_shape=K.get_value(self.kernel).shape
-        print("kernel_shape : "+str(K.get_value(self.kernel).shape))
+        print(("kernel_shape : "+str(K.get_value(self.kernel).shape)))
         d=kernel_shape[1]
-        print("data shape : "+str(inputs.shape))
+        print(("data shape : "+str(inputs.shape)))
         kernel1xd = K.reshape(self.kernel[0,:],(1,kernel_shape[1],kernel_shape[2],kernel_shape[3]))
-        print (K.get_value(kernel1xd).shape)
+        print((K.get_value(kernel1xd).shape))
         kerneldx1 = K.reshape(self.kernel[1,:], (kernel_shape[1],1, kernel_shape[2], kernel_shape[3]))
-        print(K.get_value(kerneldx1).shape)
+        print((K.get_value(kerneldx1).shape))
         conv1xd = K.conv2d(
             inputs,
             kernel1xd,
@@ -100,9 +100,9 @@ class E2E_conv(Layer):
                 data_format=self.data_format,
                 dilation_rate=self.dilation_rate)
         concat1 = K.concatenate([convdx1]*d,axis=1)
-        print("cat1"+str(concat1.shape))
+        print(("cat1"+str(concat1.shape)))
         concat2 = K.concatenate([conv1xd]*d,axis=2)
-        print("cat2" + str(concat1.dtype))
+        print(("cat2" + str(concat1.dtype)))
         return concat1+concat2
 
     def compute_output_shape(self, input_shape):

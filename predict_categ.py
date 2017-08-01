@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 
 import matplotlib.pyplot as plt
 plt.interactive(False)
@@ -37,8 +37,8 @@ adhd_data = datasets.fetch_adhd(n_subjects=20)
 msdl_data = datasets.fetch_atlas_msdl()
 msdl_coords = msdl_data.region_coords
 n_regions = len(msdl_coords)
-print('MSDL has {0} ROIs, part of the following networks :\n{1}.'.format(
-    n_regions, msdl_data.networks))
+print(('MSDL has {0} ROIs, part of the following networks :\n{1}.'.format(
+    n_regions, msdl_data.networks)))
 from nilearn import input_data
 
 masker = input_data.NiftiMapsMasker(
@@ -59,17 +59,17 @@ for func_file, confound_file, phenotypic in zip(
     site_names.append(phenotypic['site'])
     adhd_labels.append(is_adhd)
 
-print('Data has {0} ADHD subjects.'.format(len(adhd_subjects)))
+print(('Data has {0} ADHD subjects.'.format(len(adhd_subjects))))
 from nilearn.connectome import ConnectivityMeasure
 
 
 
 conn_measure = ConnectivityMeasure(kind="tangent")
 x_train = conn_measure.fit_transform(pooled_subjects)
-print(x_train.shape)
-print(len(adhd_labels))
+print((x_train.shape))
+print((len(adhd_labels)))
 y_train = np.array(adhd_labels,dtype="float32")
-print(y_train.shape)
+print((y_train.shape))
 
 # Prediction ###############################
 
@@ -89,10 +89,10 @@ kernel_init = initializers.he_uniform()
 
 model = Sequential()
 model.add(E2E_conv(2,8,(2,39),kernel_regularizer=reg,input_shape=(39,39,1),input_dtype='float32',data_format="channels_last"))
-print("First layer output shape :"+str(model.output_shape))
+print(("First layer output shape :"+str(model.output_shape)))
 model.add(LeakyReLU(alpha=0.33))
 #print(model.output_shape)
-print(model.output_shape)
+print((model.output_shape))
 model.add(LeakyReLU(alpha=0.33))
 model.add(Convolution2D(32,(1,39),kernel_regularizer=reg,data_format="channels_last"))
 model.add(LeakyReLU(alpha=0.33))
@@ -127,11 +127,11 @@ for i, (train, test) in enumerate(skf):
     history = model.fit(x_train[train], y_train[train], batch_size=1, nb_epoch=1000, verbose=0, callbacks=[csv_logger])
     y_pred = model.predict(x_train[test])
     accuracy = np.append(accuracy,np.array([accuracy_score(y_train[test], y_pred) * 100]))
-    print('Accuracy : ' + str("{0:.2f}".format(accuracy_score(y_train[test], y_pred) * 100)) + " %")
+    print(('Accuracy : ' + str("{0:.2f}".format(accuracy_score(y_train[test], y_pred) * 100)) + " %"))
 
 print("Accuracy :")
 print(accuracy)
-print("mean accuracy :" + str(np.mean(accuracy)))
+print(("mean accuracy :" + str(np.mean(accuracy))))
 
 
 

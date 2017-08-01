@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 
 import matplotlib.pyplot as plt
 plt.interactive(False)
@@ -50,11 +50,11 @@ print(x_train)
 
 model = Sequential()
 model.add(E2E_conv(2,32,(2,90),kernel_regularizer=reg,input_shape=(90,90,1),input_dtype='float32',data_format="channels_last"))
-print("First layer output shape :"+str(model.output_shape))
+print(("First layer output shape :"+str(model.output_shape)))
 model.add(LeakyReLU(alpha=0.33))
 #print(model.output_shape)
 model.add(E2E_conv(2,32,(2,90),kernel_regularizer=reg,data_format="channels_last"))
-print(model.output_shape)
+print((model.output_shape))
 model.add(LeakyReLU(alpha=0.33))
 model.add(Convolution2D(64,(1,90),kernel_regularizer=reg,data_format="channels_last"))
 model.add(LeakyReLU(alpha=0.33))
@@ -81,9 +81,9 @@ model.summary()
 opt = optimizers.SGD(momentum=momentum,nesterov=True,lr=lr)
 model.compile(optimizer=opt,loss='mean_squared_error',metrics=['mae'])
 csv_logger = callbacks.CSVLogger('BrainCNN.log')
-command = str(raw_input("Train or predict ? [t/p]"))
+command = str(eval(input("Train or predict ? [t/p]")))
 if command == "t":
-    print("Training for noise = "+str(noise_weight))
+    print(("Training for noise = "+str(noise_weight)))
     history=model.fit(x_train,y_train,nb_epoch=1000,verbose=1,callbacks=[csv_logger])
     model.save_weights("Weights/BrainCNNWeights_noise_"+str(noise_weight)+".h5")
 else:
