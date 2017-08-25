@@ -246,6 +246,7 @@ def generate_injury_signatures(X_mn, n_injuries, r_state):
             assert (A.T == A).all()  # Check if matrix is symmetric.
 
         return np.asarray(S)
+
 def sample_injury_strengths(n_samples, X_mn, A, B, noise_weight):
         """Returns n_samples connectomes with simulated injury from two sources."""
         mult_factor = 10
