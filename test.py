@@ -1,139 +1,299 @@
 from __future__ import print_function, division
-
 import matplotlib.pyplot as plt
 plt.interactive(False)
+import tensorflow as tf
+import h5py
 from scipy.stats import pearsonr
 from keras.models import Sequential
 from keras.layers import Convolution2D
-from keras.layers import Dense, Dropout, Flatten, Activation
-from keras.layers.advanced_activations import LeakyReLU, PReLU
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers.advanced_activations import LeakyReLU
 from keras import optimizers, callbacks, regularizers, initializers
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 from E2E_conv import *
-
+from injury import ConnectomeInjury
 import numpy as np
-import matplotlib.pylab as plt
 
-
-def plot_matrices(matrices, matrix_kind):
-    n_matrices = len(matrices)
-    plt.figure(figsize=(n_matrices * 4, 4))
-    for n_subject, matrix in enumerate(matrices):
-        plt.subplot(1, n_matrices, n_subject + 1)
-        matrix = matrix.copy()  # avoid side effects
-        # Set diagonal to zero, for better visualization
-        np.fill_diagonal(matrix, 0)
-        vmax = np.max(np.abs(matrix))
-        plt.imshow(matrix, vmin=-vmax, vmax=vmax, cmap='RdBu_r',
-                   interpolation='nearest')
-        plt.title('{0}, subject {1}'.format(matrix_kind, n_subject))
-from nilearn import datasets
-
-
-adhd_data = datasets.fetch_adhd(n_subjects=20)
-msdl_data = datasets.fetch_atlas_msdl()
-msdl_coords = msdl_data.region_coords
-n_regions = len(msdl_coords)
-print('MSDL has {0} ROIs, part of the following networks :\n{1}.'.format(
-    n_regions, msdl_data.networks))
-from nilearn import input_data
-
-masker = input_data.NiftiMapsMasker(
-    msdl_data.maps, resampling_target="data", t_r=2.5, detrend=True,
-    low_pass=.1, high_pass=.01, memory='nilearn_cache', memory_level=1)
-adhd_subjects = []
-pooled_subjects = []
-site_names = []
-adhd_labels = []  # 1 if ADHD, 0 if control
-for func_file, confound_file, phenotypic in zip(
-        adhd_data.func, adhd_data.confounds, adhd_data.phenotypic):
-    time_series = masker.fit_transform(func_file, confounds=confound_file)
-    pooled_subjects.append(time_series)
-    is_adhd = phenotypic['adhd']
-    if is_adhd:
-        adhd_subjects.append(time_series)
-
-    site_names.append(phenotypic['site'])
-    adhd_labels.append(is_adhd)
-
-print('Data has {0} ADHD subjects.'.format(len(adhd_subjects)))
-from nilearn.connectome import ConnectivityMeasure
-from sklearn.cross_validation import StratifiedKFold
-
-classes = ['{0}{1}'.format(site_name, adhd_label)
-           for site_name, adhd_label in zip(site_names, adhd_labels)]
-cv = StratifiedKFold(classes, n_folds=2)
-
-
-conn_measure = ConnectivityMeasure(kind="tangent")
-x_train = conn_measure.fit_transform(pooled_subjects)
-print(x_train.shape)
-print(len(adhd_labels))
-y_train = np.array(adhd_labels,dtype="float32")
-print(y_train.shape)
-
-# Prediction ###############################
 
 
 batch_size = 14
 dropout = 0.5
 momentum = 0.9
-lr = 0.001
+lr = 0.01
 decay = 0.0005
+noise_weight = 0.0625
 
 reg = regularizers.l2(decay)
 kernel_init = initializers.he_uniform()
 
 
 
+
+
+
 # Model architecture
-def initiate_model():
-    model = Sequential()
-    model.add(E2E_conv(2,8,(2,39),kernel_regularizer=reg,input_shape=(39,39,1),input_dtype='float32',data_format="channels_last"))
-    print("First layer output shape :"+str(model.output_shape))
-    model.add(LeakyReLU(alpha=0.33))
-    #print(model.output_shape)
-    print(model.output_shape)
-    model.add(LeakyReLU(alpha=0.33))
-    model.add(Convolution2D(32,(1,39),kernel_regularizer=reg,data_format="channels_last"))
-    model.add(LeakyReLU(alpha=0.33))
-    model.add(Convolution2D(90,(39,1),kernel_regularizer=reg,data_format="channels_last"))
-    model.add(LeakyReLU(alpha=0.33))
-    #print(model.output_shape)
-    model.add(Dropout(0.5))
-    model.add(Dense(64,kernel_regularizer=reg,kernel_initializer=kernel_init))
-    #print(model.output_shape)
-    model.add(LeakyReLU(alpha=0.33))
-    #print(model.output_shape)
-    model.add(Dropout(0.5))
-    model.add(Dense(10,kernel_regularizer=reg,kernel_initializer=kernel_init))
-    model.add(LeakyReLU(alpha=0.33))
-    #print(model.output_shape)
-    model.add(Dropout(0.5))
-    model.add(Dense(1,kernel_regularizer=reg,kernel_initializer=kernel_init))
-    model.add(Flatten())
-    model.add(Activation('softmax'))
-    model.summary()
-    #print(model.output_shape)
-    opt = optimizers.SGD(nesterov=True,lr=lr)
-    model.compile(optimizer=opt,loss='binary_crossentropy',metrics=['accuracy'])
-    return model
 
-model = initiate_model()
-csv_logger = callbacks.CSVLogger('predict_age.log')
+model = Sequential()
+model.add(E2E_conv(2,32,(2,90),kernel_regularizer=reg,input_shape=(90,90,1),input_dtype='float32',data_format="channels_last"))
+print("First layer output shape :"+str(model.output_shape))
+model.add(LeakyReLU(alpha=0.33))
+#print(model.output_shape)
+model.add(E2E_conv(2,32,(2,90),kernel_regularizer=reg,data_format="channels_last"))
+print(model.output_shape)
+model.add(LeakyReLU(alpha=0.33))
+model.add(Convolution2D(64,(1,90),kernel_regularizer=reg,data_format="channels_last"))
+model.add(LeakyReLU(alpha=0.33))
+model.add(Convolution2D(256,(90,1),kernel_regularizer=reg,data_format="channels_last"))
+model.add(LeakyReLU(alpha=0.33))
+#print(model.output_shape)
+model.add(Dropout(0.5))
+model.add(Dense(128,kernel_regularizer=reg,kernel_initializer=kernel_init))
+#print(model.output_shape)
+model.add(LeakyReLU(alpha=0.33))
+#print(model.output_shape)
+model.add(Dropout(0.5))
+model.add(Dense(30,kernel_regularizer=reg,kernel_initializer=kernel_init))
+model.add(LeakyReLU(alpha=0.33))
+#print(model.output_shape)
+model.add(Dropout(0.5))
+model.add(Dense(2,kernel_regularizer=reg,kernel_initializer=kernel_init))
+model.add(Flatten())
+model.add(LeakyReLU(alpha=0.33))
+model.summary()
+#print(model.output_shape)
 
 
+opt = optimizers.SGD(momentum=momentum,nesterov=True,lr=lr)
+model.compile(optimizer=opt,loss='mean_squared_error',metrics=['mae'])
 
-x_train = x_train.reshape(x_train.shape[0],x_train.shape[1],x_train.shape[2],1)
+def get_symmetric_noise(m, n):
+    """Return a random noise image of size m x n with values between 0 and 1."""
+
+    # Generate random noise image.
+    noise_img = np.random.rand(m, n)
+
+    # Make the noise image symmetric.
+    noise_img = noise_img + noise_img.T
+
+    # Normalize between 0 and 1.
+    noise_img = (noise_img - noise_img.min()) / (noise_img.max() - noise_img.min())
+
+    assert noise_img.max() == 1  # Make sure is between 0 and 1.
+    assert noise_img.min() == 0
+    assert (noise_img.T == noise_img).all()  # Make sure symmetric.
+
+    return noise_img
 
 
-from keras.wrappers.scikit_learn import KerasClassifier
-
-MLP = KerasClassifier(build_fn=model,verbose=1)
-
-from sklearn.model_selection import cross_val_score
-cv_scores = cross_val_score(MLP,X=x_train,y=y_train,cv=cv,scoring="accuracy")
-print("accuracy = "+str(cv_scores))
+def simulate_injury(X, weight_A, sig_A, weight_B, sig_B):
+    denom = (np.ones(X.shape) + (weight_A * sig_A)) * (np.ones(X.shape) + (weight_B * sig_B))
+    X_sig_AB = np.divide(X, denom)
+    return X_sig_AB
 
 
+def apply_injury_and_noise(X, Sig_A, weight_A, Sig_B, weight_B, noise_weight):
+    """Returns a symmetric, signed, noisy, adjacency matrix with simulated injury from two sources."""
+
+    X_sig_AB = simulate_injury(X, weight_A, Sig_A, weight_B, Sig_B)
+
+    # Get the noise image.
+    noise_img = get_symmetric_noise(X.shape[0], X.shape[1])
+
+    # Weight the noise image.
+    weighted_noise_img = noise_img * noise_weight
+
+    # Add the noise to the original image.
+    X_sig_AB_noise = X_sig_AB + weighted_noise_img
+
+    assert (X_sig_AB_noise.T == X_sig_AB_noise).all()  # Make sure still is symmetric.
+
+    return X_sig_AB_noise
+
+
+def generate_injury_signatures(X_mn, n_injuries, r_state):
+    """Generates the signatures that represent the underlying signal in our synthetic experiments.
+
+    d : (integer) the size of the input matrix (assumes is size dxd)
+    """
+
+    # Get the strongest regions, which we will apply simulated injuries
+    sig_indexes = [2, 50]
+    d = X_mn.shape[0]
+
+    S = []
+
+    # Create a signature for
+    for idx, sig_idx in enumerate(sig_indexes):
+        # Okay, let's make some signature noise vectors.
+        A_vec = r_state.rand((d))
+        # B_vec = np.random.random((n))
+
+        # Create the signature matrix.
+        A = np.zeros((d, d))
+        A[:, sig_idx] = A_vec
+        A[sig_idx, :] = A_vec
+        S.append(A)
+
+        assert (A.T == A).all()  # Check if matrix is symmetric.
+
+    return np.asarray(S)
+
+
+def sample_injury_strengths(n_samples, X_mn, A, B, noise_weight):
+    """Returns n_samples connectomes with simulated injury from two sources."""
+    mult_factor = 10
+
+    n_classes = 2
+
+    # Range of values to predict.
+    n_start = 0.5
+    n_end = 1.4
+    # amt_increase = 0.1
+
+    # These will be our Y.
+    A_weights = np.random.uniform(n_start, n_end, [n_samples])
+    B_weights = np.random.uniform(n_start, n_end, [n_samples])
+
+    X_h5 = np.zeros((n_samples, 1, X_mn.shape[0], X_mn.shape[1]), dtype=np.float32)
+    Y_h5 = np.zeros((n_samples, n_classes), dtype=np.float32)
+
+    for idx in range(n_samples):
+        w_A = A_weights[idx]
+        w_B = B_weights[idx]
+
+        # Get the matrix.
+        X_sig = apply_injury_and_noise(X_mn, A, w_A * mult_factor, B, w_B * mult_factor, noise_weight)
+
+        # Normalize.
+        X_sig = (X_sig - X_sig.min()) / (X_sig.max() - X_sig.min())
+
+        # Put in h5 format.
+        X_h5[idx, 0, :, :] = X_sig
+        Y_h5[idx, :] = [w_A, w_B]
+
+    return X_h5, Y_h5
+
+
+def load_base_connectome():
+    X_mn = scipy.io.loadmat("data/base.mat")
+    X_mn = X_mn['X_mn']
+    return X_mn
+def get_symmetric_noise(m, n):
+    """Return a random noise image of size m x n with values between 0 and 1."""
+
+    # Generate random noise image.
+    noise_img = np.random.rand(m, n)
+
+    # Make the noise image symmetric.
+    noise_img = noise_img + noise_img.T
+
+    # Normalize between 0 and 1.
+    noise_img = (noise_img - noise_img.min()) / (noise_img.max() - noise_img.min())
+
+    assert noise_img.max() == 1  # Make sure is between 0 and 1.
+    assert noise_img.min() == 0
+    assert (noise_img.T == noise_img).all()  # Make sure symmetric.
+
+    return noise_img
+
+def simulate_injury(X, weight_A, sig_A, weight_B, sig_B):
+    denom = (np.ones(X.shape) + (weight_A * sig_A)) * (np.ones(X.shape) + (weight_B * sig_B))
+    X_sig_AB = np.divide(X, denom)
+    return X_sig_AB
+
+def apply_injury_and_noise(X, Sig_A, weight_A, Sig_B, weight_B, noise_weight):
+    """Returns a symmetric, signed, noisy, adjacency matrix with simulated injury from two sources."""
+
+    X_sig_AB = simulate_injury(X, weight_A, Sig_A, weight_B, Sig_B)
+
+    # Get the noise image.
+    noise_img = get_symmetric_noise(X.shape[0], X.shape[1])
+
+    # Weight the noise image.
+    weighted_noise_img = noise_img * noise_weight
+
+    # Add the noise to the original image.
+    X_sig_AB_noise = X_sig_AB + weighted_noise_img
+
+    assert (X_sig_AB_noise.T == X_sig_AB_noise).all()  # Make sure still is symmetric.
+
+    return X_sig_AB_noise
+
+
+def generate_injury_signatures(X_mn, n_injuries, r_state):
+        """Generates the signatures that represent the underlying signal in our synthetic experiments.
+
+        d : (integer) the size of the input matrix (assumes is size dxd)
+        """
+
+        # Get the strongest regions, which we will apply simulated injuries
+        sig_indexes = [2,50]
+        d = X_mn.shape[0]
+
+        S = []
+
+        # Create a signature for
+        for idx, sig_idx in enumerate(sig_indexes):
+            # Okay, let's make some signature noise vectors.
+            A_vec = r_state.rand((d))
+            # B_vec = np.random.random((n))
+
+            # Create the signature matrix.
+            A = np.zeros((d, d))
+            A[:, sig_idx] = A_vec
+            A[sig_idx, :] = A_vec
+            S.append(A)
+
+            assert (A.T == A).all()  # Check if matrix is symmetric.
+
+        return np.asarray(S)
+
+def sample_injury_strengths(n_samples, X_mn, A, B, noise_weight):
+        """Returns n_samples connectomes with simulated injury from two sources."""
+        mult_factor = 10
+
+        n_classes = 2
+
+        # Range of values to predict.
+        n_start = 0.5
+        n_end = 1.4
+        # amt_increase = 0.1
+
+        # These will be our Y.
+        A_weights = np.random.uniform(n_start, n_end, [n_samples])
+        B_weights = np.random.uniform(n_start, n_end, [n_samples])
+
+        X_h5 = np.zeros((n_samples, 1, X_mn.shape[0], X_mn.shape[1]), dtype=np.float32)
+        Y_h5 = np.zeros((n_samples, n_classes), dtype=np.float32)
+
+        for idx in range(n_samples):
+            w_A = A_weights[idx]
+            w_B = B_weights[idx]
+
+            # Get the matrix.
+            X_sig = apply_injury_and_noise(X_mn, A, w_A * mult_factor, B, w_B * mult_factor, noise_weight)
+
+            # Normalize.
+            X_sig = (X_sig - X_sig.min()) / (X_sig.max() - X_sig.min())
+
+            # Put in h5 format.
+            X_h5[idx, 0, :, :] = X_sig
+            Y_h5[idx, :] = [w_A, w_B]
+
+        return X_h5, Y_h5
+import numpy as np
+import scipy
+r_state = np.random.RandomState(41)
+X_mn = load_base_connectome()
+S = generate_injury_signatures(X_mn=X_mn,n_injuries=2,r_state=r_state)
+X,Y = sample_injury_strengths(1000,X_mn,S[0],S[1],noise_weight)
+print(X.shape)
+print(Y.shape)
+
+def load_base_connectome():
+    X_mn = scipy.io.loadmat("data/base.mat")
+    X_mn = X_mn['X_mn']
+    return X_mn
+
+X = X.reshape(X.shape[0],X.shape[3],X.shape[2],X.shape[1])
+model.fit(X,Y,nb_epoch=1000,verbose=1)
+model.save_weights("Weights/BrainCNNWeights_Visualization.h5")

@@ -14,6 +14,7 @@ from E2E_conv import *
 from utils import *
 from injury import ConnectomeInjury
 
+
 batch_size = 14
 dropout = 0.5
 momentum = 0.9
